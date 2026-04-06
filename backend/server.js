@@ -24,13 +24,13 @@ app.use(cors());
 app.use(express.json());
 
 app.post('/api/quizzes', async (req, res) => {
-  if (!useDB) return res.status(500).json({error: "Database not configured"});
+  if (!useDB) return res.status(500).json({ error: "Database not configured" });
   try {
     const quiz = new Quiz(req.body);
     await quiz.save();
     res.json(quiz);
-  } catch(e) {
-    res.status(400).json({error: e.message});
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 });
 
@@ -39,8 +39,8 @@ app.get('/api/results', async (req, res) => {
   try {
     const results = await QuizResult.find().sort({ date: -1 }).limit(50);
     res.json(results);
-  } catch(e) {
-    res.status(400).json({error: e.message});
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 });
 
@@ -95,11 +95,11 @@ io.on('connection', (socket) => {
             }))
           };
         }
-      } catch(e) { console.error(e) }
+      } catch (e) { console.error(e) }
     } else {
       quiz = quizzes.find(q => q.id === quizId);
     }
-    
+
     if (!quiz) return callback({ error: "Quiz not found" });
 
     let pin = generatePIN();
@@ -113,7 +113,7 @@ io.on('connection', (socket) => {
       hostId: socket.id,
       players: [],
       currentQuestionIndex: -1,
-      state: 'lobby', 
+      state: 'lobby',
       answersThisRound: 0,
       questionStartTime: 0
     };
@@ -170,7 +170,7 @@ io.on('connection', (socket) => {
 
     const currentQ = room.quiz.questions[room.currentQuestionIndex];
     let isCorrect = (answerIndex === currentQ.correctOption);
-    
+
     if (isCorrect) {
       const timeTaken = (Date.now() - room.questionStartTime) / 1000;
       const timeLimit = currentQ.timeLimit;
@@ -179,9 +179,9 @@ io.on('connection', (socket) => {
     }
 
     room.answersThisRound++;
-    
+
     io.to(room.hostId).emit('player-answered', { answersCount: room.answersThisRound });
-    
+
     if (typeof callback === 'function') callback({ success: true, isCorrect, score: player.score });
   });
 
@@ -205,19 +205,19 @@ io.on('connection', (socket) => {
         room.state = 'finished';
         const sortedPlayers = [...room.players].sort((a, b) => b.score - a.score);
         io.to(pin).emit('game-finished', { players: sortedPlayers });
-        
+
         if (useDB && room.quiz.id && room.players.length > 0) {
           try {
             const isValidId = mongoose.Types.ObjectId.isValid(room.quiz.id);
             if (isValidId) {
-               QuizResult.create({
-                 quizId: room.quiz.id,
-                 quizTitle: room.quiz.title,
-                 players: sortedPlayers.map(p => ({name: p.name, score: p.score}))
-               });
+              QuizResult.create({
+                quizId: room.quiz.id,
+                quizTitle: room.quiz.title,
+                players: sortedPlayers.map(p => ({ name: p.name, score: p.score }))
+              });
             }
           } catch (e) {
-             console.error("Failed to save results:", e);
+            console.error("Failed to save results:", e);
           }
         }
       } else {

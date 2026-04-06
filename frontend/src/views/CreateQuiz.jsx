@@ -62,10 +62,11 @@ export default function CreateQuiz() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3>Question {qIndex + 1}</h3>
           </div>
-          <input 
+          <textarea 
             className="input-field" 
-            placeholder="Type your question..." 
+            placeholder="Type your question (you can use enter for new lines)..." 
             value={q.text}
+            style={{ resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }}
             onChange={(e) => {
               const newQ = [...questions];
               newQ[qIndex].text = e.target.value;

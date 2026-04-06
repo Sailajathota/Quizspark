@@ -66,7 +66,7 @@ export default function PlayerView() {
   if (gameState === 'question' && question) {
     return (
       <div className="app-container" style={{ padding: '1rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 800 }}>
+        <div style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 800, whiteSpace: 'pre-wrap' }}>
           {question.text || "Choose an answer"}
         </div>
         <div className="question-grid" style={{ flexGrow: 1 }}>
