@@ -1,0 +1,9 @@
+{
+  "name": "quizspark",
+  "version": "1.0.0",
+  "description": "Root configuration for Railway deployment",
+  "scripts": {
+    "install": "cd backend && npm install",
+    "start": "cd backend && npm start"
+  }
+}
