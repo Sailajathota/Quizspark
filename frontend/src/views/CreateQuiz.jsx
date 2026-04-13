@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CreateQuiz() {
@@ -8,6 +8,13 @@ export default function CreateQuiz() {
   ]);
   const [status, setStatus] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('quizspark_user');
+    if (!savedUser) return navigate('/');
+    const user = JSON.parse(savedUser);
+    if (user.role !== 'teacher') return navigate('/');
+  }, [navigate]);
 
   const handleAddQuestion = () => {
     setQuestions([...questions, { text: '', options: ['', '', '', ''], correctOption: 0, timeLimit: 20 }]);
@@ -19,14 +26,46 @@ export default function CreateQuiz() {
     setQuestions(newQ);
   };
 
+  const handleImageUpload = (qIndex, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > 800) {
+          height = Math.round((height * 800) / width);
+          width = 800;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        
+        const newQ = [...questions];
+        newQ[qIndex].image = dataUrl;
+        setQuestions(newQ);
+      }
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreate = async () => {
     if (!title) return setStatus('Please add a title!');
     try {
       setStatus('Saving...');
+      const token = localStorage.getItem('quizspark_token');
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
       const res = await fetch(`${backendUrl}/api/quizzes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ title, questions })
       });
       if (res.ok) {
@@ -73,6 +112,12 @@ export default function CreateQuiz() {
               setQuestions(newQ);
             }}
           />
+          
+          <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Attach Image (optional)</label>
+            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(qIndex, e.target.files[0])} />
+            {q.image && <img src={q.image} alt="preview" style={{ marginTop: '1rem', maxHeight: '150px', display: 'block', borderRadius: '4px' }} />}
+          </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
             {q.options.map((opt, optIndex) => (

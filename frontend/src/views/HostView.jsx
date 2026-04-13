@@ -16,6 +16,17 @@ export default function HostView() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const savedUser = localStorage.getItem('quizspark_user');
+    if (!savedUser) {
+      navigate('/');
+      return;
+    }
+    const user = JSON.parse(savedUser);
+    if (user.role !== 'teacher') {
+      navigate('/');
+      return;
+    }
+
     socket.emit('get-quizzes', (res) => {
       if (res.quizzes) setQuizzes(res.quizzes);
     });
@@ -119,6 +130,9 @@ export default function HostView() {
           <button className="btn btn-primary" onClick={handleShowLeaderboard}>Skip / Show Results</button>
         </div>
         <div className="host-question-text">{currentQuestion.text}</div>
+        {currentQuestion.image && (
+          <img src={currentQuestion.image} alt="Question" style={{ maxHeight: '25vh', borderRadius: '8px', marginBottom: '2rem' }} />
+        )}
         <div className="question-grid">
           {currentQuestion.options.map((opt, i) => (
             <div key={i} className={`answer-option opt-${i}`} style={{ cursor: 'default' }}>

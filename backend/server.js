@@ -22,9 +22,49 @@ if (process.env.MONGODB_URI) {
 const app = express();
 app.use(cors());
 app.use(express.json());
+const { OAuth2Client } = require('google-auth-library');
+const jwt = require('jsonwebtoken');
 
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+app.post('/api/auth/google', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'No credential provided' });
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email;
+    
+    // Check role
+    const teacherEmails = process.env.TEACHER_EMAILS ? process.env.TEACHER_EMAILS.split(',') : [];
+    const isTeacher = teacherEmails.includes(email);
+    const role = isTeacher ? 'teacher' : 'student';
+
+    // Sign a session JWT
+    const token = jwt.sign({ email, role, name: payload.name }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '24h' });
+    
+    res.json({ token, user: { email, name: payload.name, role } });
+  } catch(e) {
+    res.status(401).json({ error: 'Invalid Google Token' });
+  }
+});
 app.post('/api/quizzes', async (req, res) => {
   if (!useDB) return res.status(500).json({ error: "Database not configured" });
+  
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'teacher') return res.status(403).json({ error: "Only teachers can create quizzes" });
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid token" });
+  }
+
   try {
     const quiz = new Quiz(req.body);
     await quiz.save();

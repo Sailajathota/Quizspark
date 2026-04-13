@@ -69,6 +69,11 @@ export default function PlayerView() {
         <div style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 800, whiteSpace: 'pre-wrap' }}>
           {question.text || "Choose an answer"}
         </div>
+        {question.image && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <img src={question.image} alt="Question" style={{ maxHeight: '20vh', borderRadius: '8px' }} />
+          </div>
+        )}
         <div className="question-grid" style={{ flexGrow: 1 }}>
           {question.options.map((opt, i) => (
             <div key={i} className={`answer-option opt-${i}`} onClick={() => submitAnswer(i)}>
