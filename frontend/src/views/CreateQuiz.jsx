@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Papa from 'papaparse';
 
 export default function CreateQuiz() {
   const [title, setTitle] = useState('');
@@ -54,6 +55,49 @@ export default function CreateQuiz() {
     reader.readAsDataURL(file);
   };
 
+  const handleCSVUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setStatus('Importing CSV...');
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        const importedQuestions = results.data.map(row => {
+          const qText = row.Question || row.question || row.text || '';
+          if (!qText) return null;
+          
+          const opt1 = row['Option 1'] || row.option1 || row['Option A'] || '';
+          const opt2 = row['Option 2'] || row.option2 || row['Option B'] || '';
+          const opt3 = row['Option 3'] || row.option3 || row['Option C'] || '';
+          const opt4 = row['Option 4'] || row.option4 || row['Option D'] || '';
+          
+          const correctObj = row['Correct Option'] || row.correctOption || row.correct || '0';
+          let correctIndex = parseInt(correctObj);
+          if (isNaN(correctIndex)) correctIndex = 0;
+          if (correctIndex >= 1 && correctIndex <= 4) correctIndex -= 1;
+          else if (correctIndex < 0 || correctIndex > 3) correctIndex = 0;
+
+          const time = row['Time'] || row['Time Limit'] || row.time || '20';
+
+          return {
+            text: qText,
+            options: [opt1, opt2, opt3, opt4],
+            correctOption: correctIndex,
+            timeLimit: parseInt(time) || 20
+          };
+        }).filter(q => q !== null);
+
+        if (importedQuestions.length > 0) {
+          setQuestions(importedQuestions);
+          setStatus(`Successfully imported ${importedQuestions.length} questions!`);
+        } else {
+          setStatus('Failed to detect valid questions. Check CSV formatting.');
+        }
+      }
+    });
+  };
+
   const handleCreate = async () => {
     if (!title) return setStatus('Please add a title!');
     try {
@@ -92,8 +136,12 @@ export default function CreateQuiz() {
           placeholder="Quiz Title" 
           value={title} 
           onChange={e => setTitle(e.target.value)} 
-          style={{ fontSize: '2rem', textAlign: 'left' }}
+          style={{ fontSize: '2rem', textAlign: 'left', marginBottom: '1rem' }}
         />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#eee', padding: '1rem', borderRadius: '8px' }}>
+          <div style={{ fontWeight: 600 }}>Or Import Question Bank (CSV):</div>
+          <input type="file" accept=".csv" onChange={handleCSVUpload} />
+        </div>
       </div>
 
       {questions.map((q, qIndex) => (
