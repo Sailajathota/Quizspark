@@ -163,7 +163,7 @@ io.on('connection', (socket) => {
   });
 
   // Player joins room
-  socket.on('join-room', ({ pin, name }, callback) => {
+  socket.on('join-room', ({ pin, name, email }, callback) => {
     const room = rooms.get(pin);
     if (!room) return typeof callback === 'function' && callback({ error: "Room not found" });
     if (room.state !== 'lobby') return typeof callback === 'function' && callback({ error: "Game already started" });
@@ -171,6 +171,7 @@ io.on('connection', (socket) => {
     const player = {
       id: socket.id,
       name: name || "Anonymous",
+      email: email || "",
       score: 0,
     };
     room.players.push(player);
@@ -253,7 +254,7 @@ io.on('connection', (socket) => {
               QuizResult.create({
                 quizId: room.quiz.id,
                 quizTitle: room.quiz.title,
-                players: sortedPlayers.map(p => ({ name: p.name, score: p.score }))
+                players: sortedPlayers.map(p => ({ name: p.name, email: p.email, score: p.score }))
               });
             }
           } catch (e) {

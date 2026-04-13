@@ -28,11 +28,11 @@ export default function Landing() {
       return;
     }
     
-    socket.emit('join-room', { pin, name: user.name }, (res) => {
+    socket.emit('join-room', { pin, name: user.name, email: user.email }, (res) => {
       if (res.error) {
         setError(res.error);
       } else {
-        navigate('/play', { state: { pin, name: user.name, initialGameState: res.state } });
+        navigate('/play', { state: { pin, name: user.name, email: user.email, initialGameState: res.state } });
       }
     });
   };

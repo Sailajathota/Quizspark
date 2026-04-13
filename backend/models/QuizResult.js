@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const PlayerResultSchema = new mongoose.Schema({
   name: String,
+  email: String,
   score: Number
 });
 
