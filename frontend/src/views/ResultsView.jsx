@@ -37,17 +37,17 @@ export default function ResultsView() {
   }, [navigate]);
 
   const exportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,Quiz Title,Date,Rank,Player Name,Player Email,Score\n";
+    let csvContent = "data:text/csv;charset=utf-8,Quiz Title,Date,Rank,Player Name,Player SRN,Score\n";
     
     results.forEach(result => {
       const title = `"${(result.quizTitle || 'Custom Quiz').replace(/"/g, '""')}"`;
       const date = `"${new Date(result.date).toLocaleString().replace(/"/g, '""')}"`;
       result.players.forEach((p, index) => {
         const name = `"${p.name.replace(/"/g, '""')}"`;
-        const email = `"${(p.email || '').replace(/"/g, '""')}"`;
+        const srn = `"${(p.srn || '').replace(/"/g, '""')}"`;
         const score = p.score;
         const rank = index + 1;
-        csvContent += `${title},${date},${rank},${name},${email},${score}\n`;
+        csvContent += `${title},${date},${rank},${name},${srn},${score}\n`;
       });
     });
 
@@ -97,7 +97,7 @@ export default function ResultsView() {
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span>{j + 1}. {p.name}</span>
-                    {p.email && <span style={{ fontSize: '0.9rem', color: '#666', textShadow: 'none', fontWeight: 'normal' }}>{p.email}</span>}
+                    {p.srn && <span style={{ fontSize: '0.9rem', color: '#666', textShadow: 'none', fontWeight: 'normal' }}>{p.srn}</span>}
                   </div>
                   <span>{p.score} pts</span>
                 </li>

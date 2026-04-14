@@ -22,33 +22,74 @@ if (process.env.MONGODB_URI) {
 const app = express();
 app.use(cors());
 app.use(express.json());
-const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const User = require('./models/User');
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-app.post('/api/auth/google', async (req, res) => {
-  const { credential } = req.body;
-  if (!credential) return res.status(400).json({ error: 'No credential provided' });
+app.post('/api/auth/signup', async (req, res) => {
+  const { name, srn, password, role } = req.body;
+  if (!name || !srn || !password) return res.status(400).json({ error: 'Missing requirements' });
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-    const payload = ticket.getPayload();
-    const email = payload.email;
+    const existing = await User.findOne({ srn });
+    if (existing) return res.status(400).json({ error: 'SRN already registered' });
     
-    // Check role
-    const teacherEmails = process.env.TEACHER_EMAILS ? process.env.TEACHER_EMAILS.split(',') : [];
-    const isTeacher = teacherEmails.includes(email);
-    const role = isTeacher ? 'teacher' : 'student';
+    let userRole = role === 'teacher' ? 'teacher' : 'student';
+    if (process.env.ADMIN_SRN && String(srn) === String(process.env.ADMIN_SRN)) {
+      userRole = 'admin';
+    }
 
-    // Sign a session JWT
-    const token = jwt.sign({ email, role, name: payload.name }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '24h' });
-    
-    res.json({ token, user: { email, name: payload.name, role } });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ name, srn, password: hashedPassword, role: userRole });
+    await user.save();
+
+    const token = jwt.sign({ srn: user.srn, role: user.role, name: user.name, id: user._id }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '24h' });
+    res.json({ token, user: { name: user.name, srn: user.srn, role: user.role } });
   } catch(e) {
-    res.status(401).json({ error: 'Invalid Google Token' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/signin', async (req, res) => {
+  const { srn, password } = req.body;
+  try {
+    const user = await User.findOne({ srn });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: 'Invalid password' });
+
+    const token = jwt.sign({ srn: user.srn, role: user.role, name: user.name, id: user._id }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '24h' });
+    res.json({ token, user: { name: user.name, srn: user.srn, role: user.role } });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/users', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'admin') return res.status(403).json({ error: "Admin only" });
+    const users = await User.find({}, '-password');
+    res.json(users);
+  } catch (err) {
+    res.status(403).json({ error: "Invalid token" });
+  }
+});
+
+app.put('/api/users/:id/role', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'admin') return res.status(403).json({ error: "Admin only" });
+    const user = await User.findByIdAndUpdate(req.params.id, { role: req.body.role }, { new: true });
+    res.json({ name: user.name, role: user.role });
+  } catch (err) {
+    res.status(403).json({ error: "Invalid token" });
   }
 });
 app.post('/api/quizzes', async (req, res) => {
@@ -171,7 +212,7 @@ io.on('connection', (socket) => {
     const player = {
       id: socket.id,
       name: name || "Anonymous",
-      email: email || "",
+      srn: email || "",
       score: 0,
     };
     room.players.push(player);
@@ -254,7 +295,7 @@ io.on('connection', (socket) => {
               QuizResult.create({
                 quizId: room.quiz.id,
                 quizTitle: room.quiz.title,
-                players: sortedPlayers.map(p => ({ name: p.name, email: p.email, score: p.score }))
+                players: sortedPlayers.map(p => ({ name: p.name, srn: p.srn, score: p.score }))
               });
             }
           } catch (e) {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { socket } from '../socket';
-import { GoogleLogin } from '@react-oauth/google';
 
 export default function Landing() {
   const [pin, setPin] = useState('');
@@ -14,7 +13,6 @@ export default function Landing() {
       console.log('Connected to server');
     });
     
-    // Check if user exists in localStorage
     const savedUser = localStorage.getItem('quizspark_user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
@@ -28,34 +26,14 @@ export default function Landing() {
       return;
     }
     
-    socket.emit('join-room', { pin, name: user.name, email: user.email }, (res) => {
+    // Using srn instead of email
+    socket.emit('join-room', { pin, name: user.name, email: user.srn }, (res) => {
       if (res.error) {
         setError(res.error);
       } else {
-        navigate('/play', { state: { pin, name: user.name, email: user.email, initialGameState: res.state } });
+        navigate('/play', { state: { pin, name: user.name, email: user.srn, initialGameState: res.state } });
       }
     });
-  };
-
-  const handleLoginSuccess = async (credentialResponse) => {
-    try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-      const res = await fetch(`${backendUrl}/api/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: credentialResponse.credential })
-      });
-      const data = await res.json();
-      if (data.token) {
-        setUser(data.user);
-        localStorage.setItem('quizspark_token', data.token);
-        localStorage.setItem('quizspark_user', JSON.stringify(data.user));
-      } else {
-        setError("Failed to authenticate.");
-      }
-    } catch (err) {
-      setError("Server error during login.");
-    }
   };
 
   const logout = () => {
@@ -72,13 +50,12 @@ export default function Landing() {
 
       {!user ? (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Login to Continue</h2>
-          {error && <div style={{ color: 'red', marginBottom: '1rem', fontWeight: 'bold' }}>{error}</div>}
-          <GoogleLogin
-            onSuccess={handleLoginSuccess}
-            onError={() => setError('Login Failed')}
-            useOneTap
-          />
+          <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Welcome to QuizSpark</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+            <Link to="/signin" className="btn btn-dark" style={{ textAlign: 'center' }}>Sign In</Link>
+            <div style={{ textAlign: 'center', margin: '0.5rem 0' }}>or</div>
+            <Link to="/signup" className="btn btn-secondary" style={{ textAlign: 'center' }}>Sign Up</Link>
+          </div>
         </div>
       ) : (
         <>
@@ -104,7 +81,7 @@ export default function Landing() {
             </form>
           </div>
 
-          {user.role === 'teacher' && (
+          {(user.role === 'teacher' || user.role === 'admin') && (
             <div>
               <p style={{ marginBottom: '1rem', color: 'rgba(255,255,255,0.8)', textAlign: 'center' }}>Teacher Actions</p>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
@@ -121,6 +98,14 @@ export default function Landing() {
                 </button>
               </div>
             </div>
+          )}
+
+          {user.role === 'admin' && (
+             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+               <button onClick={() => navigate('/admin')} className="btn btn-dark" style={{ width: '100%', maxWidth: '300px' }}>
+                 Admin Dashboard
+               </button>
+             </div>
           )}
         </>
       )}

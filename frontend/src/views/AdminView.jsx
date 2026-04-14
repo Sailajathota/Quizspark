@@ -1,0 +1,113 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export default function AdminView() {
+  const [users, setUsers] = useState([]);
+  const [status, setStatus] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('quizspark_user');
+    if (!savedUser) {
+      navigate('/');
+      return;
+    }
+    const user = JSON.parse(savedUser);
+    if (user.role !== 'admin') {
+      navigate('/');
+      return;
+    }
+
+    fetchUsers();
+  }, [navigate]);
+
+  const fetchUsers = async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('quizspark_token');
+      const res = await fetch(`${backendUrl}/api/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data);
+      } else {
+        setStatus("Failed to load users");
+      }
+    } catch(e) {
+      setStatus("Server connection error");
+    }
+  };
+
+  const updateRole = async (userId, newRole) => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('quizspark_token');
+      const res = await fetch(`${backendUrl}/api/users/${userId}/role`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ role: newRole })
+      });
+      if (res.ok) {
+        setUsers(users.map(u => u._id === userId ? { ...u, role: newRole } : u));
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <div className="center-screen" style={{ justifyContent: 'flex-start', padding: '2rem', overflowY: 'auto' }}>
+      <h1 style={{ marginBottom: '2rem' }}>Admin Dashboard</h1>
+      {status && <div style={{ color: 'red', marginBottom: '1rem' }}>{status}</div>}
+
+      <div className="card" style={{ maxWidth: '800px', width: '100%' }}>
+        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #ccc' }}>
+              <th style={{ padding: '1rem 0' }}>Name</th>
+              <th>SRN</th>
+              <th>Current Role</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u._id} style={{ borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: '1rem 0', fontWeight: 600 }}>{u.name}</td>
+                <td>{u.srn}</td>
+                <td>
+                  <span style={{ 
+                    background: u.role === 'admin' ? '#333' : u.role === 'teacher' ? 'var(--shape-green)' : 'var(--shape-blue)',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.85rem',
+                    textTransform: 'uppercase'
+                  }}>
+                    {u.role}
+                  </span>
+                </td>
+                <td>
+                  <select 
+                    value={u.role} 
+                    onChange={e => updateRole(u._id, e.target.value)}
+                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  >
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button className="btn btn-secondary" style={{ marginTop: '2rem' }} onClick={() => navigate('/')}>Back Home</button>
+    </div>
+  );
+}
