@@ -114,11 +114,52 @@ app.post('/api/quizzes', async (req, res) => {
     res.status(400).json({ error: e.message });
   }
 });
+app.delete('/api/quizzes/:id', async (req, res) => {
+  if (!useDB) return res.status(500).json({ error: "Database not configured" });
+  
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'teacher' && decoded.role !== 'admin') {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid token" });
+  }
+
+  try {
+    await Quiz.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
 
 app.get('/api/results', async (req, res) => {
   if (!useDB) return res.json([]);
+  
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  
+  let hostSrnFilter = null;
+  const token = authHeader.split(' ')[1];
   try {
-    const results = await QuizResult.find().sort({ date: -1 }).limit(50);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role === 'teacher') {
+      hostSrnFilter = decoded.srn;
+    } else if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid token" });
+  }
+
+  try {
+    const query = hostSrnFilter ? { hostSrn: hostSrnFilter } : {};
+    const results = await QuizResult.find(query).sort({ date: -1 }).limit(50);
     res.json(results);
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -158,7 +199,7 @@ io.on('connection', (socket) => {
   });
 
   // Host creates room
-  socket.on('create-room', async ({ quizId }, callback) => {
+  socket.on('create-room', async ({ quizId, hostSrn }, callback) => {
     if (typeof callback !== 'function') return;
     let quiz;
     if (useDB) {
@@ -192,6 +233,7 @@ io.on('connection', (socket) => {
       pin,
       quiz,
       hostId: socket.id,
+      hostSrn: hostSrn || "",
       players: [],
       currentQuestionIndex: -1,
       state: 'lobby',

@@ -66,12 +66,36 @@ export default function HostView() {
   }, []);
 
   const handleStartHost = (quizId) => {
-    socket.emit('create-room', { quizId }, (res) => {
+    const user = JSON.parse(localStorage.getItem('quizspark_user'));
+    socket.emit('create-room', { quizId, hostSrn: user.srn }, (res) => {
       if (res.success) {
         setPin(res.pin);
         setGameState('lobby');
       }
     });
+  };
+
+  const handleDeleteQuiz = async (quizId, e) => {
+    e.stopPropagation(); // prevent triggering handleStartHost
+    if (!window.confirm('Are you sure you want to delete this quiz?')) return;
+    
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('quizspark_token');
+      const res = await fetch(`${backendUrl}/api/quizzes/${quizId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        setQuizzes(quizzes.filter(q => q.id !== quizId));
+      } else {
+        alert("Failed to delete quiz");
+      }
+    } catch (err) {
+      alert("Error connecting to server");
+    }
   };
 
   const handleStartGame = () => {
@@ -92,9 +116,20 @@ export default function HostView() {
         <h1 style={{ marginBottom: '2rem' }}>Select a Quiz to Host</h1>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           {quizzes.map(q => (
-            <div key={q.id} className="card" style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleStartHost(q.id)}>
-              <h2 style={{ marginBottom: '1rem' }}>{q.title}</h2>
-              <button className="btn btn-primary">Select</button>
+            <div key={q.id} className="card" style={{ cursor: 'pointer', textAlign: 'center', position: 'relative' }} onClick={() => handleStartHost(q.id)}>
+              <button 
+                onClick={(e) => handleDeleteQuiz(q.id, e)}
+                style={{ 
+                  position: 'absolute', top: '10px', right: '10px', background: 'red', color: 'white', 
+                  border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'
+                }}
+                title="Delete Quiz"
+              >
+                X
+              </button>
+              <h2 style={{ marginBottom: '1rem', marginTop: '1rem' }}>{q.title}</h2>
+              <button className="btn btn-primary" style={{ pointerEvents: 'none' }}>Select</button>
             </div>
           ))}
         </div>

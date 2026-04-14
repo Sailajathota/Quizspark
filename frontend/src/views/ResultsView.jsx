@@ -13,7 +13,7 @@ export default function ResultsView() {
       return;
     }
     const user = JSON.parse(savedUser);
-    if (user.role !== 'teacher') {
+    if (user.role !== 'teacher' && user.role !== 'admin') {
       navigate('/');
       return;
     }
@@ -21,7 +21,11 @@ export default function ResultsView() {
     const fetchResults = async () => {
       try {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        const res = await fetch(`${backendUrl}/api/results`);
+        const res = await fetch(`${backendUrl}/api/results`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('quizspark_token')}`
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           setResults(data);

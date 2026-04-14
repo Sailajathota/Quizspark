@@ -9,6 +9,7 @@ const PlayerResultSchema = new mongoose.Schema({
 const QuizResultSchema = new mongoose.Schema({
   quizId: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
   quizTitle: String,
+  hostSrn: String,
   date: { type: Date, default: Date.now },
   players: [PlayerResultSchema]
 });
