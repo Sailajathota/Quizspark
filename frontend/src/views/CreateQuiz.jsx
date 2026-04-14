@@ -166,6 +166,22 @@ export default function CreateQuiz() {
             <input type="file" accept="image/*" onChange={(e) => handleImageUpload(qIndex, e.target.files[0])} />
             {q.image && <img src={q.image} alt="preview" style={{ marginTop: '1rem', maxHeight: '150px', display: 'block', borderRadius: '4px' }} />}
           </div>
+
+          <div style={{ marginTop: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label style={{ fontWeight: 600 }}>Time Limit (seconds):</label>
+            <input 
+              type="number" 
+              className="input-field" 
+              style={{ width: '100px', marginBottom: 0 }} 
+              value={q.timeLimit}
+              min={5}
+              onChange={(e) => {
+                const newQ = [...questions];
+                newQ[qIndex].timeLimit = parseInt(e.target.value) || 20;
+                setQuestions(newQ);
+              }}
+            />
+          </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
             {q.options.map((opt, optIndex) => (

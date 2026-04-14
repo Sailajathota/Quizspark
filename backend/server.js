@@ -335,6 +335,14 @@ io.on('connection', (socket) => {
 
     io.to(room.hostId).emit('player-answered', { answersCount: room.answersThisRound });
 
+    // Automatic progression if all players have submitted
+    if (room.answersThisRound === room.players.length) {
+      room.state = 'leaderboard';
+      const sortedPlayers = [...room.players].sort((a, b) => b.score - a.score);
+      const correctAnswer = room.quiz.questions[room.currentQuestionIndex].correctOption;
+      io.to(pin).emit('leaderboard', { players: sortedPlayers, correctAnswer });
+    }
+
     if (typeof callback === 'function') callback({ success: true, isCorrect, score: player.score });
   });
 
