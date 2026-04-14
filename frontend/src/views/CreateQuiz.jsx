@@ -14,7 +14,7 @@ export default function CreateQuiz() {
     const savedUser = localStorage.getItem('quizspark_user');
     if (!savedUser) return navigate('/');
     const user = JSON.parse(savedUser);
-    if (user.role !== 'teacher') return navigate('/');
+    if (user.role !== 'teacher' && user.role !== 'admin') return navigate('/');
   }, [navigate]);
 
   const handleAddQuestion = () => {

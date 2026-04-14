@@ -98,22 +98,51 @@ app.post('/api/quizzes', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(403).json({ error: "No token provided" });
   
+  let decoded;
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    if (decoded.role !== 'teacher') return res.status(403).json({ error: "Only teachers can create quizzes" });
+    decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'teacher' && decoded.role !== 'admin') {
+      return res.status(403).json({ error: "Only teachers or admins can create quizzes" });
+    }
   } catch (err) {
     return res.status(403).json({ error: "Invalid token" });
   }
 
   try {
-    const quiz = new Quiz(req.body);
+    const quiz = new Quiz({
+      ...req.body,
+      creatorSrn: decoded.srn
+    });
     await quiz.save();
     res.json(quiz);
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
 });
+app.get('/api/quizzes', async (req, res) => {
+  if (!useDB) return res.json([]);
+  
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  
+  let decoded;
+  const token = authHeader.split(' ')[1];
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid token" });
+  }
+
+  try {
+    const query = decoded.role === 'admin' ? {} : { creatorSrn: decoded.srn };
+    const quizzes = await Quiz.find(query, 'title _id creatorSrn');
+    res.json(quizzes.map(q => ({ id: q._id.toString(), title: q.title })));
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 app.delete('/api/quizzes/:id', async (req, res) => {
   if (!useDB) return res.status(500).json({ error: "Database not configured" });
   
@@ -337,6 +366,7 @@ io.on('connection', (socket) => {
               QuizResult.create({
                 quizId: room.quiz.id,
                 quizTitle: room.quiz.title,
+                hostSrn: room.hostSrn,
                 players: sortedPlayers.map(p => ({ name: p.name, srn: p.srn, score: p.score }))
               });
             }
