@@ -223,8 +223,33 @@ export default function HostView() {
 
   if (gameState === 'leaderboard') {
     return (
-      <div className="center-screen">
-        <h1 style={{ marginBottom: '2rem', fontStyle: 'italic', fontWeight: 900 }}>Leaderboard</h1>
+      <div className="center-screen" style={{ background: '#f8fafc', justifyContent: 'flex-start', paddingTop: '2rem' }}>
+        <h1 style={{ marginBottom: '1.5rem', fontWeight: 900, color: '#1e293b' }}>Results</h1>
+        
+        {/* Question Summary with Correct Answer */}
+        <div style={{ width: '90%', maxWidth: '800px', background: 'white', padding: '1.5rem', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '2rem', border: '2px solid #e2e8f0' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, textAlign: 'center', marginBottom: '1.5rem' }}>{currentQuestion?.text}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {currentQuestion?.options.map((opt, i) => (
+              <div key={i} style={{ 
+                padding: '12px', 
+                borderRadius: '8px', 
+                textAlign: 'center',
+                fontWeight: 700,
+                fontSize: '1.1rem',
+                border: i === correctAnswer ? '4px solid #10b981' : '1px solid #e2e8f0',
+                background: i === correctAnswer ? 'rgba(16, 185, 129, 0.1)' : 'white',
+                color: i === correctAnswer ? '#059669' : '#64748b',
+                position: 'relative'
+              }}>
+                {opt}
+                {i === correctAnswer && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>✅</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <h2 style={{ marginBottom: '1rem', fontStyle: 'italic', fontWeight: 900 }}>Leaderboard</h2>
         <ul className="leaderboard-list" style={{ width: '85%', maxWidth: '700px' }}>
           {leaderboard.map((p, i) => (
             <li key={i} className="leaderboard-item" style={{ 
@@ -233,12 +258,12 @@ export default function HostView() {
               borderLeft: `12px solid ${i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'transparent'}`,
               marginBottom: '10px', borderRadius: '10px', fontSize: '1.4rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
             }}>
-              <span style={{ fontWeight: 800 }}>{i + 1}. {p.name}</span>
+              <span style={{ fontWeight: 800 }}>{i + 1}. {p.name} <span style={{fontSize: '0.8rem', color: '#94a3b8', fontWeight: 400}}>({p.srn})</span></span>
               <span style={{ fontWeight: 900, color: 'var(--primary)' }}>{p.score} pts</span>
             </li>
           ))}
         </ul>
-        <div style={{ marginTop: '2.5rem' }}>
+        <div style={{ marginTop: '2.5rem', marginBottom: '2rem' }}>
           <button className="btn btn-secondary" style={{ padding: '15px 40px', fontSize: '1.3rem' }} onClick={handleNextQuestion}>Next Question</button>
         </div>
       </div>

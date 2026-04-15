@@ -39,7 +39,7 @@ export default function SignIn() {
         <form onSubmit={handleSignIn} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
           <input 
             type="text" 
-            placeholder="SRN" 
+            placeholder="Employee ID / SRN" 
             className="input-field"
             value={srn}
             onChange={(e) => setSrn(e.target.value)}

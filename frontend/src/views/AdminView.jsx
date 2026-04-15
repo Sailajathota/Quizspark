@@ -59,6 +59,25 @@ export default function AdminView() {
     }
   };
 
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('quizspark_token');
+      const res = await fetch(`${backendUrl}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setUsers(users.filter(u => u._id !== userId));
+      } else {
+        alert("Failed to delete user");
+      }
+    } catch(e) {
+      alert("Error deleting user");
+    }
+  };
+
   return (
     <div className="center-screen" style={{ justifyContent: 'flex-start', padding: '2rem', overflowY: 'auto' }}>
       <h1 style={{ marginBottom: '2rem' }}>Admin Dashboard</h1>
@@ -69,7 +88,7 @@ export default function AdminView() {
           <thead>
             <tr style={{ borderBottom: '2px solid #ccc' }}>
               <th style={{ padding: '1rem 0' }}>Name</th>
-              <th>SRN</th>
+              <th>Employee ID / SRN</th>
               <th>Current Role</th>
               <th>Actions</th>
             </tr>
@@ -92,15 +111,27 @@ export default function AdminView() {
                   </span>
                 </td>
                 <td>
-                  <select 
-                    value={u.role} 
-                    onChange={e => updateRole(u._id, e.target.value)}
-                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-                  >
-                    <option value="student">Student</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <select 
+                      value={u.role} 
+                      onChange={e => updateRole(u._id, e.target.value)}
+                      style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                    >
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button 
+                      onClick={() => handleDeleteUser(u._id)}
+                      style={{ 
+                        background: '#fee2e2', color: '#ef4444', border: 'none', 
+                        padding: '8px 12px', borderRadius: '4px', cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

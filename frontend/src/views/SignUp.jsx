@@ -67,7 +67,7 @@ export default function SignUp() {
           />
           <input 
             type="text" 
-            placeholder="SRN" 
+            placeholder={role === 'teacher' ? "Employee ID" : "SRN"} 
             className="input-field"
             value={srn}
             onChange={(e) => setSrn(e.target.value)}

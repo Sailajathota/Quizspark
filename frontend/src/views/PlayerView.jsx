@@ -28,7 +28,9 @@ export default function PlayerView() {
       setFeedback(null);
     });
 
-    socket.on('leaderboard', () => {
+    socket.on('leaderboard', ({ correctAnswer }) => {
+      setFeedback(prev => prev); // keep previous feedback to know if correct/wrong
+      setQuestion(prev => ({ ...prev, correctAnswer }));
       setGameState('leaderboard');
     });
 
@@ -104,10 +106,17 @@ export default function PlayerView() {
   }
 
   if (gameState === 'leaderboard') {
+    const isCorrect = feedback === true;
+    const correctAnswerText = question?.options[question?.correctAnswer];
+    
     return (
-      <div className="center-screen gradient-bg">
-        <h2>Waiting for next question...</h2>
-        <div className="status-badge" style={{ marginTop: '1rem' }}>Current Score: {score}</div>
+      <div className={`center-screen ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`}>
+        <h2 style={{ fontSize: '2.5rem' }}>{isCorrect ? 'Awesome!' : 'Time for more study!'}</h2>
+        {!isCorrect && <div style={{ marginTop: '1rem', fontSize: '1.2rem', background: 'rgba(255,255,255,0.2)', padding: '10px 20px', borderRadius: '10px' }}>
+          Correct Answer: <span style={{fontWeight: 900}}>{correctAnswerText}</span>
+        </div>}
+        <div className="status-badge" style={{ marginTop: '2rem' }}>Total Score: {score}</div>
+        <p style={{ marginTop: '1rem' }}>Get ready for the next one...</p>
       </div>
     );
   }

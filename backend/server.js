@@ -92,6 +92,26 @@ app.put('/api/users/:id/role', async (req, res) => {
     res.status(403).json({ error: "Invalid token" });
   }
 });
+
+app.delete('/api/users/:id', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'admin') return res.status(403).json({ error: "Admin only" });
+    
+    // Prevent admin from deleting themselves if needed, or just allow it.
+    // Let's at least check if the user exists
+    const userToDelete = await User.findById(req.params.id);
+    if (!userToDelete) return res.status(404).json({ error: "User not found" });
+
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(403).json({ error: "Invalid token" });
+  }
+});
 app.post('/api/quizzes', async (req, res) => {
   if (!useDB) return res.status(500).json({ error: "Database not configured" });
   
@@ -192,6 +212,40 @@ app.get('/api/results', async (req, res) => {
     res.json(results);
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+app.delete('/api/results/:id', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'teacher' && decoded.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
+    
+    await QuizResult.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(403).json({ error: "Invalid token" });
+  }
+});
+
+app.delete('/api/results/:id/player/:playerSrn', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ error: "No token provided" });
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    if (decoded.role !== 'teacher' && decoded.role !== 'admin') return res.status(403).json({ error: "Unauthorized" });
+    
+    const result = await QuizResult.findById(req.params.id);
+    if (!result) return res.status(404).json({ error: "Result not found" });
+    
+    result.players = result.players.filter(p => p.srn !== req.params.playerSrn);
+    await result.save();
+    res.json({ success: true, players: result.players });
+  } catch (err) {
+    res.status(403).json({ error: "Invalid token" });
   }
 });
 
